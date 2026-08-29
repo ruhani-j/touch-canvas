@@ -29,15 +29,16 @@ class ClickerView @JvmOverloads constructor(
     private val maxRadius = 120f * density
     private val snapRadius = 60f * density
 
+    var currentColor: Int = Color.parseColor("#1A1A2E")
+
     // Whiteboard
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#1A1A2E")
         strokeWidth = 4f * density
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
     }
-    private val paths = mutableListOf<Path>()
+    private val paths = mutableListOf<Pair<Path, Int>>()
     private val activePointers = mutableMapOf<Int, Path>()
 
     // Pointer
@@ -71,7 +72,7 @@ class ClickerView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                 val path = Path().apply { moveTo(event.getX(idx), event.getY(idx)) }
                 activePointers[pid] = path
-                paths.add(path)
+                paths.add(Pair(path, currentColor))
             }
             MotionEvent.ACTION_MOVE -> {
                 for (i in 0 until event.pointerCount) {
@@ -132,7 +133,10 @@ class ClickerView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         when (mode) {
-            DrawMode.WHITEBOARD -> paths.forEach { canvas.drawPath(it, strokePaint) }
+            DrawMode.WHITEBOARD -> paths.forEach { (path, color) ->
+                strokePaint.color = color
+                canvas.drawPath(path, strokePaint)
+            }
             DrawMode.POINTER -> circles.toList().forEach { c ->
                 circlePaint.alpha = c.alpha
                 canvas.drawCircle(c.x, c.y, c.radius, circlePaint)

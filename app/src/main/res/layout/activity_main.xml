@@ -58,11 +58,28 @@
 
     </LinearLayout>
 
-    <com.ruhan.clickercounter.ClickerView
-        android:id="@+id/clickerView"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="?attr/colorBackground" />
+        android:layout_weight="1">
+
+        <com.ruhan.clickercounter.ClickerView
+            android:id="@+id/clickerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="?attr/colorBackground" />
+
+        <LinearLayout
+            android:id="@+id/colorPalette"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="start|center_vertical"
+            android:layout_margin="10dp"
+            android:orientation="vertical"
+            android:background="@drawable/palette_bg"
+            android:padding="6dp"
+            android:elevation="8dp" />
+
+    </FrameLayout>
 
 </LinearLayout>
