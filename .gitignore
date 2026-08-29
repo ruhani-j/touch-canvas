@@ -1,0 +1,66 @@
+# Claude Code instructions (project-specific, not for version control)
+CLAUDE.md
+
+# Gradle build outputs
+.gradle/
+build/
+**/build/
+
+# Local configuration (machine-specific paths and SDK locations)
+local.properties
+
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+
+# Keystore files (never commit signing keys)
+*.jks
+*.keystore
+
+# Generated files
+gen/
+generated/
+
+# Proguard mapping (generated per-build)
+# proguard-rules.pro is intentionally kept — it is hand-authored
+*.mapping
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor backups and swap files
+*~
+*.swp
+*.swo
+*.bak
+*.orig
+
+# Node / npm (if any tooling is added later)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Environment / secrets
+.env
+.env.*
+*.env
+secrets.properties
+google-services.json
+
+# Test results and coverage
+test-results/
+reports/
+coverage/
+
+# Android-specific
+captures/
+lint/
+*.ap_
