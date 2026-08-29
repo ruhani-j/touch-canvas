@@ -10,7 +10,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="10dp"
-        android:background="#FAFAFA"
+        android:background="?attr/colorSurface"
         android:elevation="4dp"
         android:gravity="center_vertical">
 
@@ -46,6 +46,16 @@
             android:layout_marginStart="10dp"
             android:text="Clear" />
 
+        <ImageButton
+            android:id="@+id/btnThemeToggle"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Toggle dark mode"
+            android:src="@drawable/ic_moon"
+            android:padding="8dp" />
+
     </LinearLayout>
 
     <com.ruhan.clickercounter.ClickerView
@@ -53,6 +63,6 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="#FFFFFF" />
+        android:background="?attr/colorBackground" />
 
 </LinearLayout>
