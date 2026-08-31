@@ -5,12 +5,14 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.util.AttributeSet
 import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.View
 
-enum class DrawMode { WHITEBOARD, POINTER, COUNTER }
+enum class DrawMode { WHITEBOARD, ERASER, POINTER, COUNTER }
 
 class ClickerView @JvmOverloads constructor(
     context: Context,
@@ -23,16 +25,28 @@ class ClickerView @JvmOverloads constructor(
     private val density = context.resources.displayMetrics.density
 
     var currentColor: Int = Color.parseColor("#1A1A2E")
+    var currentStrokeWidthDp: Float = 4f
 
     // Whiteboard
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        strokeWidth = 4f * density
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
     }
-    private val paths = mutableListOf<Pair<Path, Int>>()
+    private val eraserPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        strokeWidth = 24f * density
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+    }
+    private data class Stroke(val path: Path, val color: Int, val isEraser: Boolean, val strokeWidthPx: Float)
+    private val paths = mutableListOf<Stroke>()
     private val activePointers = mutableMapOf<Int, Path>()
+
+    init {
+        setLayerType(LAYER_TYPE_SOFTWARE, null)
+    }
 
     // Laser pointer
     private data class TrailPoint(val x: Float, val y: Float, val time: Long)
@@ -111,7 +125,7 @@ class ClickerView @JvmOverloads constructor(
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         return when (mode) {
-            DrawMode.WHITEBOARD -> handleWhiteboard(event)
+            DrawMode.WHITEBOARD, DrawMode.ERASER -> handleWhiteboard(event)
             DrawMode.POINTER -> handlePointer(event)
             DrawMode.COUNTER -> handleCounter(event)
         }
@@ -125,7 +139,7 @@ class ClickerView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                 val path = Path().apply { moveTo(event.getX(idx), event.getY(idx)) }
                 activePointers[pid] = path
-                paths.add(Pair(path, currentColor))
+                paths.add(Stroke(path, currentColor, mode == DrawMode.ERASER, currentStrokeWidthDp * density))
             }
             MotionEvent.ACTION_MOVE -> {
                 for (i in 0 until event.pointerCount) {
@@ -197,9 +211,14 @@ class ClickerView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         when (mode) {
-            DrawMode.WHITEBOARD -> paths.forEach { (path, color) ->
-                strokePaint.color = color
-                canvas.drawPath(path, strokePaint)
+            DrawMode.WHITEBOARD, DrawMode.ERASER -> paths.forEach { stroke ->
+                if (stroke.isEraser) {
+                    canvas.drawPath(stroke.path, eraserPaint)
+                } else {
+                    strokePaint.color = stroke.color
+                    strokePaint.strokeWidth = stroke.strokeWidthPx
+                    canvas.drawPath(stroke.path, strokePaint)
+                }
             }
             DrawMode.COUNTER -> {
                 val cx = width / 2f
