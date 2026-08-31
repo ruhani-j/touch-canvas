@@ -30,6 +30,13 @@
                 android:text="Whiteboard" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEraser"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Eraser" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPointer"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="wrap_content"
@@ -44,14 +51,6 @@
                 android:text="Counter" />
 
         </com.google.android.material.button.MaterialButtonToggleGroup>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnClear"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:text="Clear" />
 
         <ImageButton
             android:id="@+id/btnThemeToggle"
@@ -86,6 +85,16 @@
             android:background="@drawable/palette_bg"
             android:padding="6dp"
             android:elevation="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClear"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end|bottom"
+            android:layout_margin="16dp"
+            android:elevation="8dp"
+            android:text="Clear" />
 
     </FrameLayout>
 
