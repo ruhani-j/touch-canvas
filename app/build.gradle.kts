@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.ruhan.clickercounter"
+    namespace = "com.ruhan.touchcanvas"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.ruhan.clickercounter"
+        applicationId = "com.ruhan.touchcanvas"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

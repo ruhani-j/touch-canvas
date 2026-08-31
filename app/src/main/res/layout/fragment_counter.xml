@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <com.ruhan.clickercounter.ClickerView
+    <com.ruhan.touchcanvas.TouchCanvasView
         android:id="@+id/clickerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
