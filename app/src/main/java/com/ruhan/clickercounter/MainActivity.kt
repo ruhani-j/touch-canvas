@@ -20,6 +20,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var colorPalette: LinearLayout
 
     private val prefs by lazy { getSharedPreferences("app_prefs", MODE_PRIVATE) }
+    private var isDark = false
 
     private val swatchColors = listOf(
         "#1A1A2E",
@@ -32,8 +33,16 @@ class MainActivity : AppCompatActivity() {
     )
     private var selectedSwatchIndex = 0
 
+    private fun invertColor(color: Int): Int =
+        Color.rgb(255 - Color.red(color), 255 - Color.green(color), 255 - Color.blue(color))
+
+    private fun effectiveSwatchColors(): List<Int> = swatchColors.map { hex ->
+        val c = Color.parseColor(hex)
+        if (isDark) invertColor(c) else c
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        val isDark = prefs.getBoolean("dark_mode", false)
+        isDark = prefs.getBoolean("dark_mode", false)
         AppCompatDelegate.setDefaultNightMode(
             if (isDark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
         )
@@ -49,11 +58,13 @@ class MainActivity : AppCompatActivity() {
 
         updateThemeIcon(isDark)
         setupColorPalette()
+        clickerView.currentColor = effectiveSwatchColors()[selectedSwatchIndex]
 
         modeToggle.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 clickerView.mode = when (checkedId) {
                     R.id.btnWhiteboard -> DrawMode.WHITEBOARD
+                    R.id.btnEraser -> DrawMode.ERASER
                     R.id.btnPointer -> DrawMode.POINTER
                     R.id.btnCounter -> DrawMode.COUNTER
                     else -> DrawMode.WHITEBOARD
@@ -83,9 +94,9 @@ class MainActivity : AppCompatActivity() {
         val density = resources.displayMetrics.density
         val swatchSize = (32 * density).toInt()
         val swatchMargin = (5 * density).toInt()
+        val colors = effectiveSwatchColors()
 
-        swatchColors.forEachIndexed { index, colorHex ->
-            val color = Color.parseColor(colorHex)
+        colors.forEachIndexed { index, color ->
             val swatch = View(this).apply {
                 layoutParams = LinearLayout.LayoutParams(swatchSize, swatchSize).apply {
                     setMargins(swatchMargin, swatchMargin, swatchMargin, swatchMargin)
@@ -102,19 +113,20 @@ class MainActivity : AppCompatActivity() {
 
     private fun makeSwatchDrawable(color: Int, selected: Boolean): GradientDrawable {
         val strokePx = (3 * resources.displayMetrics.density).toInt()
+        val strokeColor = if (isDark) Color.DKGRAY else Color.WHITE
         return GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setColor(color)
             if (selected) {
-                setStroke(strokePx, Color.WHITE)
+                setStroke(strokePx, strokeColor)
             }
         }
     }
 
     private fun updateSwatchSelection(newIndex: Int) {
-        swatchColors.forEachIndexed { index, colorHex ->
+        effectiveSwatchColors().forEachIndexed { index, color ->
             val swatch = colorPalette.getChildAt(index)
-            swatch.background = makeSwatchDrawable(Color.parseColor(colorHex), index == newIndex)
+            swatch.background = makeSwatchDrawable(color, index == newIndex)
         }
         selectedSwatchIndex = newIndex
     }
