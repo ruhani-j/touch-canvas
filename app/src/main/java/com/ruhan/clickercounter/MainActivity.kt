@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity() {
                 clickerView.mode = when (checkedId) {
                     R.id.btnWhiteboard -> DrawMode.WHITEBOARD
                     R.id.btnPointer -> DrawMode.POINTER
+                    R.id.btnCounter -> DrawMode.COUNTER
                     else -> DrawMode.WHITEBOARD
                 }
                 colorPalette.visibility = if (clickerView.mode == DrawMode.WHITEBOARD) {
