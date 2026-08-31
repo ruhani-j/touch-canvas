@@ -1,4 +1,4 @@
-# TouchCanvas
+# Touch Canvas
 
 An Android app with three interactive canvas modes: freehand whiteboard drawing, a laser pointer that follows your finger, and a tap counter.
 
@@ -35,4 +35,4 @@ Open the project in Android Studio and run on a device or emulator.
 - Material 3
 - Custom `View` with raw `Canvas` / `Paint` / `Path` — no external drawing library
 - Multi-touch `MotionEvent` pointer ID tracking
-- `ValueAnimator` for pointer fade-out
+- `Choreographer.FrameCallback` for pointer trail fade-out
