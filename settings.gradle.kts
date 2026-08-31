@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ClickerCounter"
+rootProject.name = "TouchCanvas"
 include(":app")
