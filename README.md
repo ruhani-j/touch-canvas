@@ -1,6 +1,6 @@
 # TouchCanvas
 
-An Android app with two interactive canvas modes: freehand whiteboard drawing and a laser pointer that follows your finger.
+An Android app with three interactive canvas modes: freehand whiteboard drawing, a laser pointer that follows your finger, and a tap counter.
 
 ## Features
 
@@ -10,8 +10,11 @@ Multi-touch freehand drawing on a canvas. Each finger draws its own independent 
 ### Pointer Mode
 Touch the screen to show a laser pointer that follows your finger. Lift your finger and it fades out automatically.
 
+### Counter Mode
+Tap the screen to count taps. The running total is displayed large in the center. Multi-touch counts each finger separately. Use Clear to reset to zero.
+
 ### Clear
-Clears all strokes instantly.
+Clears all strokes or resets the counter, depending on the active mode.
 
 ## Requirements
 
