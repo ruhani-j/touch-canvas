@@ -1,48 +1,25 @@
 package com.ruhan.clickercounter
 
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.view.View
 import android.widget.ImageButton
-import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var clickerView: ClickerView
-    private lateinit var modeToggle: MaterialButtonToggleGroup
-    private lateinit var btnClear: MaterialButton
+    private lateinit var bottomNav: BottomNavigationView
     private lateinit var btnThemeToggle: ImageButton
-    private lateinit var colorPalette: LinearLayout
+
+    private lateinit var drawFragment: DrawFragment
+    private lateinit var laserFragment: LaserFragment
+    private lateinit var counterFragment: CounterFragment
 
     private val prefs by lazy { getSharedPreferences("app_prefs", MODE_PRIVATE) }
     private var isDark = false
 
-    private val swatchColors = listOf(
-        "#1A1A2E",
-        "#E53935",
-        "#1E88E5",
-        "#43A047",
-        "#FB8C00",
-        "#8E24AA",
-        "#E91E63",
-    )
-    private var selectedSwatchIndex = 0
-
-    private fun invertColor(color: Int): Int =
-        Color.rgb(255 - Color.red(color), 255 - Color.green(color), 255 - Color.blue(color))
-
-    private fun effectiveSwatchColors(): List<Int> = swatchColors.map { hex ->
-        val c = Color.parseColor(hex)
-        if (isDark) invertColor(c) else c
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
-        isDark = prefs.getBoolean("dark_mode", false)
+        isDark = getSharedPreferences("app_prefs", MODE_PRIVATE).getBoolean("dark_mode", false)
         AppCompatDelegate.setDefaultNightMode(
             if (isDark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
         )
@@ -50,34 +27,39 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        clickerView = findViewById(R.id.clickerView)
-        modeToggle = findViewById(R.id.modeToggle)
-        btnClear = findViewById(R.id.btnClear)
+        bottomNav = findViewById(R.id.bottomNav)
         btnThemeToggle = findViewById(R.id.btnThemeToggle)
-        colorPalette = findViewById(R.id.colorPalette)
 
-        updateThemeIcon(isDark)
-        setupColorPalette()
-        clickerView.currentColor = effectiveSwatchColors()[selectedSwatchIndex]
+        drawFragment = supportFragmentManager.findFragmentByTag("draw") as? DrawFragment ?: DrawFragment()
+        laserFragment = supportFragmentManager.findFragmentByTag("laser") as? LaserFragment ?: LaserFragment()
+        counterFragment = supportFragmentManager.findFragmentByTag("counter") as? CounterFragment ?: CounterFragment()
 
-        modeToggle.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (isChecked) {
-                clickerView.mode = when (checkedId) {
-                    R.id.btnWhiteboard -> DrawMode.WHITEBOARD
-                    R.id.btnEraser -> DrawMode.ERASER
-                    R.id.btnPointer -> DrawMode.POINTER
-                    R.id.btnCounter -> DrawMode.COUNTER
-                    else -> DrawMode.WHITEBOARD
-                }
-                colorPalette.visibility = if (clickerView.mode == DrawMode.WHITEBOARD) {
-                    View.VISIBLE
-                } else {
-                    View.GONE
-                }
-            }
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .add(R.id.fragmentContainer, counterFragment, "counter")
+                .add(R.id.fragmentContainer, laserFragment, "laser")
+                .add(R.id.fragmentContainer, drawFragment, "draw")
+                .hide(laserFragment)
+                .hide(counterFragment)
+                .commit()
         }
 
-        btnClear.setOnClickListener { clickerView.clear() }
+        bottomNav.setOnItemSelectedListener { item ->
+            val (toShow, toHide1, toHide2) = when (item.itemId) {
+                R.id.nav_draw -> Triple(drawFragment, laserFragment, counterFragment)
+                R.id.nav_laser -> Triple(laserFragment, drawFragment, counterFragment)
+                R.id.nav_counter -> Triple(counterFragment, drawFragment, laserFragment)
+                else -> return@setOnItemSelectedListener false
+            }
+            supportFragmentManager.beginTransaction()
+                .show(toShow)
+                .hide(toHide1)
+                .hide(toHide2)
+                .commit()
+            true
+        }
+
+        updateThemeIcon(isDark)
 
         btnThemeToggle.setOnClickListener {
             val nowDark = !prefs.getBoolean("dark_mode", false)
@@ -86,49 +68,6 @@ class MainActivity : AppCompatActivity() {
                 if (nowDark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
             )
         }
-
-        modeToggle.check(R.id.btnWhiteboard)
-    }
-
-    private fun setupColorPalette() {
-        val density = resources.displayMetrics.density
-        val swatchSize = (32 * density).toInt()
-        val swatchMargin = (5 * density).toInt()
-        val colors = effectiveSwatchColors()
-
-        colors.forEachIndexed { index, color ->
-            val swatch = View(this).apply {
-                layoutParams = LinearLayout.LayoutParams(swatchSize, swatchSize).apply {
-                    setMargins(swatchMargin, swatchMargin, swatchMargin, swatchMargin)
-                }
-                background = makeSwatchDrawable(color, index == selectedSwatchIndex)
-                setOnClickListener {
-                    clickerView.currentColor = color
-                    updateSwatchSelection(index)
-                }
-            }
-            colorPalette.addView(swatch)
-        }
-    }
-
-    private fun makeSwatchDrawable(color: Int, selected: Boolean): GradientDrawable {
-        val strokePx = (3 * resources.displayMetrics.density).toInt()
-        val strokeColor = if (isDark) Color.DKGRAY else Color.WHITE
-        return GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(color)
-            if (selected) {
-                setStroke(strokePx, strokeColor)
-            }
-        }
-    }
-
-    private fun updateSwatchSelection(newIndex: Int) {
-        effectiveSwatchColors().forEachIndexed { index, color ->
-            val swatch = colorPalette.getChildAt(index)
-            swatch.background = makeSwatchDrawable(color, index == newIndex)
-        }
-        selectedSwatchIndex = newIndex
     }
 
     private fun updateThemeIcon(isDark: Boolean) {

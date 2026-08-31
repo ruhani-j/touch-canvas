@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_draw"
+        android:icon="@drawable/ic_pencil"
+        android:title="Draw" />
+    <item
+        android:id="@+id/nav_laser"
+        android:icon="@drawable/ic_laser"
+        android:title="Laser" />
+    <item
+        android:id="@+id/nav_counter"
+        android:icon="@drawable/ic_counter"
+        android:title="Count" />
+</menu>
