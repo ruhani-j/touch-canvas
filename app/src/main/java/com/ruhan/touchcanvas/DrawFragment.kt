@@ -26,6 +26,9 @@ class DrawFragment : Fragment() {
     private val swatchColors = listOf(
         "#1A1A2E", "#E53935", "#1E88E5", "#43A047", "#FB8C00", "#8E24AA", "#E91E63",
     )
+    private val darkSwatchColors = listOf(
+        "#7986CB", "#EF5350", "#42A5F5", "#66BB6A", "#FFA726", "#AB47BC", "#EC407A",
+    )
     private var selectedColorIndex = 0
     private var eraserSelected = false
 
@@ -87,12 +90,9 @@ class DrawFragment : Fragment() {
         btnClear.setOnClickListener { clickerView.clear() }
     }
 
-    private fun invertColor(color: Int) =
-        Color.rgb(255 - Color.red(color), 255 - Color.green(color), 255 - Color.blue(color))
-
-    private fun effectiveSwatchColors(): List<Int> = swatchColors.map { hex ->
-        val c = Color.parseColor(hex)
-        if (isDark) invertColor(c) else c
+    private fun effectiveSwatchColors(): List<Int> {
+        val palette = if (isDark) darkSwatchColors else swatchColors
+        return palette.map { Color.parseColor(it) }
     }
 
     private fun setupColorPalette() {
