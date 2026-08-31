@@ -1,18 +1,16 @@
 package com.ruhan.clickercounter
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
-import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.util.AttributeSet
+import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.View
 
-enum class DrawMode { WHITEBOARD, POINTER }
+enum class DrawMode { WHITEBOARD, POINTER, COUNTER }
 
 class ClickerView @JvmOverloads constructor(
     context: Context,
@@ -37,33 +35,85 @@ class ClickerView @JvmOverloads constructor(
     private val activePointers = mutableMapOf<Int, Path>()
 
     // Laser pointer
-    private data class LaserDot(
-        val pointerId: Int,
-        var x: Float,
-        var y: Float,
-        var alpha: Float = 1f,
-        var animator: ValueAnimator? = null
-    )
+    private data class TrailPoint(val x: Float, val y: Float, val time: Long)
 
-    private val activeDots = mutableMapOf<Int, LaserDot>()
-    private val fadingDots = mutableListOf<LaserDot>()
-
-    private val coreRadius = 14f * density
-    private val glowRadius = 34f * density
-
-    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FF1744")
-        style = Paint.Style.FILL
+    private class LaserTrail(val pointerId: Int) {
+        val points = ArrayDeque<TrailPoint>()
+        var active = true
+        var lastX = 0f
+        var lastY = 0f
     }
-    private val centerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+
+    private val activeTrails = mutableMapOf<Int, LaserTrail>()
+    private val fadingTrails = mutableListOf<LaserTrail>()
+
+    private val trailDurationMs = 2000L
+    private val minDistSq = (4f * density) * (4f * density)
+    private val dotRadius = 18f * density
+    private val laserColor = Color.parseColor("#FF1744")
+
+    private val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
+        color = laserColor
+    }
+
+    // Tap counter
+    private val counterTextColor: Int = run {
+        val ta = context.obtainStyledAttributes(intArrayOf(android.R.attr.textColorPrimary))
+        val color = ta.getColorStateList(0)?.defaultColor ?: Color.DKGRAY
+        ta.recycle()
+        color
+    }
+
+    private var tapCount = 0
+
+    private val counterNumPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        style = Paint.Style.FILL
+        color = counterTextColor
+    }
+
+    private val counterLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        style = Paint.Style.FILL
+        color = counterTextColor
+        alpha = 150
+    }
+
+    private var animating = false
+
+    private val frameCallback = object : Choreographer.FrameCallback {
+        override fun doFrame(frameTimeNanos: Long) {
+            val now = System.currentTimeMillis()
+            fadingTrails.forEach { trail ->
+                while (trail.points.isNotEmpty() && now - trail.points.first().time > trailDurationMs) {
+                    trail.points.removeFirst()
+                }
+            }
+            fadingTrails.removeAll { it.points.isEmpty() }
+
+            if (fadingTrails.isNotEmpty()) {
+                invalidate()
+                Choreographer.getInstance().postFrameCallback(this)
+            } else {
+                animating = false
+                invalidate()
+            }
+        }
+    }
+
+    private fun ensureAnimating() {
+        if (!animating) {
+            animating = true
+            Choreographer.getInstance().postFrameCallback(frameCallback)
+        }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         return when (mode) {
             DrawMode.WHITEBOARD -> handleWhiteboard(event)
             DrawMode.POINTER -> handlePointer(event)
+            DrawMode.COUNTER -> handleCounter(event)
         }
     }
 
@@ -89,51 +139,59 @@ class ClickerView @JvmOverloads constructor(
         return true
     }
 
+    private fun handleCounter(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN ||
+            event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
+            tapCount++
+            invalidate()
+        }
+        return true
+    }
+
     private fun handlePointer(event: MotionEvent): Boolean {
         val idx = event.actionIndex
         val pid = event.getPointerId(idx)
+        val now = System.currentTimeMillis()
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
-                activeDots[pid] = LaserDot(pointerId = pid, x = event.getX(idx), y = event.getY(idx))
+                val x = event.getX(idx)
+                val y = event.getY(idx)
+                val trail = LaserTrail(pid).also {
+                    it.points.addLast(TrailPoint(x, y, now))
+                    it.lastX = x
+                    it.lastY = y
+                }
+                activeTrails[pid] = trail
                 invalidate()
             }
             MotionEvent.ACTION_MOVE -> {
                 for (i in 0 until event.pointerCount) {
                     val id = event.getPointerId(i)
-                    activeDots[id]?.let {
-                        it.x = event.getX(i)
-                        it.y = event.getY(i)
+                    activeTrails[id]?.let { trail ->
+                        val x = event.getX(i)
+                        val y = event.getY(i)
+                        val dx = x - trail.lastX
+                        val dy = y - trail.lastY
+                        if (dx * dx + dy * dy >= minDistSq) {
+                            trail.points.addLast(TrailPoint(x, y, now))
+                            if (trail.points.size > 400) trail.points.removeFirst()
+                            trail.lastX = x
+                            trail.lastY = y
+                        }
                     }
                 }
                 invalidate()
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
-                activeDots.remove(pid)?.let { dot ->
-                    fadingDots.add(dot)
-                    startFadeOut(dot)
+                activeTrails.remove(pid)?.let { trail ->
+                    trail.active = false
+                    fadingTrails.add(trail)
+                    ensureAnimating()
                 }
             }
         }
         return true
-    }
-
-    private fun startFadeOut(dot: LaserDot) {
-        ValueAnimator.ofFloat(1f, 0f).apply {
-            duration = 700
-            addUpdateListener {
-                dot.alpha = it.animatedValue as Float
-                invalidate()
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    fadingDots.remove(dot)
-                    invalidate()
-                }
-            })
-            dot.animator = this
-            start()
-        }
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -143,15 +201,35 @@ class ClickerView @JvmOverloads constructor(
                 strokePaint.color = color
                 canvas.drawPath(path, strokePaint)
             }
+            DrawMode.COUNTER -> {
+                val cx = width / 2f
+                val numSize = minOf(width, height) * 0.38f
+                val baselineY = height / 2f + numSize * 0.35f
+                counterNumPaint.textSize = numSize
+                canvas.drawText(tapCount.toString(), cx, baselineY, counterNumPaint)
+                counterLabelPaint.textSize = numSize * 0.18f
+                canvas.drawText("taps", cx, baselineY + numSize * 0.22f, counterLabelPaint)
+            }
             DrawMode.POINTER -> {
-                (activeDots.values.toList() + fadingDots.toList()).forEach { dot ->
-                    val a = (dot.alpha * 255).toInt()
-                    glowPaint.alpha = (a * 0.35f).toInt()
-                    canvas.drawCircle(dot.x, dot.y, glowRadius, glowPaint)
-                    glowPaint.alpha = a
-                    canvas.drawCircle(dot.x, dot.y, coreRadius, glowPaint)
-                    centerPaint.alpha = a
-                    canvas.drawCircle(dot.x, dot.y, coreRadius * 0.45f, centerPaint)
+                val now = System.currentTimeMillis()
+                (activeTrails.values.toList() + fadingTrails.toList()).forEach { trail ->
+                    val pts = trail.points.toList()
+                    if (pts.isEmpty()) return@forEach
+                    val headTime = pts.last().time
+
+                    pts.forEach { pt ->
+                        val age = if (trail.active) headTime - pt.time else now - pt.time
+                        val fraction = (1f - age.toFloat() / trailDurationMs).coerceIn(0f, 1f)
+                        if (fraction == 0f) return@forEach
+                        val alpha = (fraction * 255).toInt()
+                        val r = dotRadius * (0.25f + 0.75f * fraction)
+
+                        trailPaint.color = laserColor
+                        trailPaint.alpha = (alpha * 0.3f).toInt()
+                        canvas.drawCircle(pt.x, pt.y, r * 2f, trailPaint)
+                        trailPaint.alpha = alpha
+                        canvas.drawCircle(pt.x, pt.y, r, trailPaint)
+                    }
                 }
             }
         }
@@ -160,10 +238,11 @@ class ClickerView @JvmOverloads constructor(
     fun clear() {
         paths.clear()
         activePointers.clear()
-        activeDots.values.forEach { it.animator?.cancel() }
-        activeDots.clear()
-        fadingDots.forEach { it.animator?.cancel() }
-        fadingDots.clear()
+        activeTrails.clear()
+        fadingTrails.clear()
+        tapCount = 0
+        Choreographer.getInstance().removeFrameCallback(frameCallback)
+        animating = false
         invalidate()
     }
 }
